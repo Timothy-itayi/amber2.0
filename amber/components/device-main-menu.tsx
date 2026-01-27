@@ -84,6 +84,8 @@ interface DeviceMainMenuProps {
   hiddenButtons?: HiddenButton[];
   onNewGame?: () => void;
   onSettings?: () => void;
+  terminalText?: string;
+  showSystemReady?: boolean;
 }
 
 export default function DeviceMainMenu({ 
@@ -94,6 +96,8 @@ export default function DeviceMainMenu({
   ],
   onNewGame,
   onSettings,
+  terminalText = 'WELCOME TO AMBER',
+  showSystemReady = true,
 }: DeviceMainMenuProps) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -331,9 +335,10 @@ export default function DeviceMainMenu({
                     {/* TERMINAL TEXT - Typewriter animation */}
                     <View style={styles.terminalContainer}>
                       <TerminalText 
-                        text="WELCOME TO AMBER"
+                        text={terminalText}
                         typingSpeed={80}
                         onComplete={handleTypingComplete}
+                        showSystemReady={showSystemReady}
                       />
                     </View>
                   </View>

@@ -6,6 +6,8 @@ interface TerminalTextProps {
   typingSpeed?: number;
   cursorBlinkSpeed?: number;
   onComplete?: () => void;
+  showSystemReady?: boolean;
+  instantDisplay?: boolean; // Skip typing animation, show text immediately
 }
 
 export default function TerminalText({
@@ -13,12 +15,15 @@ export default function TerminalText({
   typingSpeed = 100,
   cursorBlinkSpeed = 530,
   onComplete,
+  showSystemReady = true,
+  instantDisplay = false,
 }: TerminalTextProps) {
-  const [displayedText, setDisplayedText] = useState('');
-  const [isTypingComplete, setIsTypingComplete] = useState(false);
+  const [displayedText, setDisplayedText] = useState(instantDisplay ? text : '');
+  const [isTypingComplete, setIsTypingComplete] = useState(instantDisplay);
   const [cursorVisible, setCursorVisible] = useState(true);
-  const charIndexRef = useRef(0);
+  const charIndexRef = useRef(instantDisplay ? text.length : 0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevTextRef = useRef(text);
 
   // Cursor blink using simple state toggle (more reliable)
   useEffect(() => {
@@ -31,6 +36,16 @@ export default function TerminalText({
 
   // Typewriter effect
   useEffect(() => {
+    // If text changed and instantDisplay is true, just show it
+    if (instantDisplay) {
+      setDisplayedText(text);
+      setIsTypingComplete(true);
+      charIndexRef.current = text.length;
+      onComplete?.();
+      return;
+    }
+
+    // Reset for new text (typing animation)
     charIndexRef.current = 0;
     setDisplayedText('');
     setIsTypingComplete(false);
@@ -49,14 +64,17 @@ export default function TerminalText({
       }
     };
 
-    // Initial delay before typing starts
+    // Initial delay before typing starts (shorter if text changed mid-session)
+    const isTextChange = prevTextRef.current !== text && prevTextRef.current !== '';
+    prevTextRef.current = text;
+    
     const startDelay = setTimeout(() => {
       typeNextChar();
       
       intervalRef.current = setInterval(() => {
         typeNextChar();
       }, typingSpeed);
-    }, 500);
+    }, isTextChange ? 100 : 500);
 
     return () => {
       clearTimeout(startDelay);
@@ -64,7 +82,7 @@ export default function TerminalText({
         clearInterval(intervalRef.current);
       }
     };
-  }, [text, typingSpeed, onComplete]);
+  }, [text, typingSpeed, onComplete, instantDisplay]);
 
   return (
     <View style={terminalStyles.container}>
@@ -83,7 +101,7 @@ export default function TerminalText({
       </View>
       
       {/* Secondary info line (appears after typing) */}
-      {isTypingComplete && (
+      {isTypingComplete && showSystemReady && (
         <View style={terminalStyles.infoLine}>
           <Text style={terminalStyles.infoText}>SYSTEM READY</Text>
         </View>
