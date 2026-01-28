@@ -7,18 +7,24 @@ interface LogEntry {
   color: 'green' | 'white' | 'red' | 'orange' | 'blue' | 'dim' | 'amber';
 }
 
-// Compact ASCII eye logo for top-right corner
+// Compact ASCII eye logo - horizontal eye, thin detailed lines
 const ASCII_LOGO = [
-  "    ▄████▄    ",
-  "  ▄██▀▀▀▀██▄  ",
-  " ██▀ ▄██▄ ▀██ ",
-  " ██ ██▀▀██ ██ ",
-  " ██▀ ▀██▀ ▀██ ",
-  "  ▀██▄▄▄▄██▀  ",
-  "    ▀████▀    ",
-  "              ",
-  "    AMBER     ",
-  " SURVEILLANCE ",
+  "       _.─────._       ",
+  "    ,-'         `-.    ",
+  "  ,'    .─────.    `.  ",
+  " /    ,'       `.    \\ ",
+  ";    /    ___    \\    ;",
+  ";   ;    /   \\    ;   ;",
+  ";   ;   (  ●  )   ;   ;",
+  ";   ;    \\___/    ;   ;",
+  ";    \\           /    ;",
+  " \\    `.       ,'    / ",
+  "  `.    `─────'    ,'  ",
+  "    `-._       _,-'    ",
+  "        `─────'        ",
+  "                       ",
+  "         AMBER         ",
+  "      SURVEILLANCE     ",
 ];
 
 // 90s Linux-style boot messages
