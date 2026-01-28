@@ -16,6 +16,7 @@ import Animated, {
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { gameConsoleStyles as styles, colors } from '../../styles/game-console.styles';
+import { Ticket } from '../../data/tickets';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -25,11 +26,15 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 interface FeatureBoardLatchProps {
   onPress?: () => void;
   moduleCount?: number;
+  /** When true, plays the "receiving module" animation */
+  isReceiving?: boolean;
 }
 
-function FeatureBoardLatch({ onPress, moduleCount = 0 }: FeatureBoardLatchProps) {
+function FeatureBoardLatch({ onPress, moduleCount = 0, isReceiving = false }: FeatureBoardLatchProps) {
   const latchAnim = useSharedValue(0);
   const glowAnim = useSharedValue(0);
+  const receiveAnim = useSharedValue(0);
+  const receivePulse = useSharedValue(0);
 
   // Pulse glow when modules are installed
   React.useEffect(() => {
@@ -47,6 +52,24 @@ function FeatureBoardLatch({ onPress, moduleCount = 0 }: FeatureBoardLatchProps)
     }
   }, [moduleCount]);
 
+  // Receiving animation - plays when a module is being installed
+  React.useEffect(() => {
+    if (isReceiving) {
+      // Bright flash and pulse
+      receiveAnim.value = withSequence(
+        withTiming(1, { duration: 100 }),
+        withTiming(0.6, { duration: 200 }),
+        withTiming(1, { duration: 100 }),
+        withTiming(0, { duration: 300 })
+      );
+      // Scale pulse
+      receivePulse.value = withSequence(
+        withSpring(1.15, { damping: 8, stiffness: 300 }),
+        withSpring(1, { damping: 12, stiffness: 200 })
+      );
+    }
+  }, [isReceiving]);
+
   const handlePress = () => {
     latchAnim.value = withSequence(
       withSpring(1, { damping: 15, stiffness: 400 }),
@@ -56,11 +79,18 @@ function FeatureBoardLatch({ onPress, moduleCount = 0 }: FeatureBoardLatchProps)
   };
 
   const animatedLatchStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: interpolate(latchAnim.value, [0, 1], [0, 4]) }],
+    transform: [
+      { translateY: interpolate(latchAnim.value, [0, 1], [0, 4]) },
+      { scale: receivePulse.value || 1 },
+    ],
   }));
 
   const animatedGlowStyle = useAnimatedStyle(() => ({
     opacity: glowAnim.value,
+  }));
+
+  const animatedReceiveStyle = useAnimatedStyle(() => ({
+    opacity: receiveAnim.value,
   }));
 
   return (
@@ -96,8 +126,11 @@ function FeatureBoardLatch({ onPress, moduleCount = 0 }: FeatureBoardLatchProps)
               moduleCount > 0 ? latchStyles.ledActive : latchStyles.ledOff
             ]} />
             
-            {/* Glow overlay */}
+            {/* Glow overlay (ambient pulse) */}
             <Animated.View style={[latchStyles.glowOverlay, animatedGlowStyle]} />
+            
+            {/* Receive flash overlay */}
+            <Animated.View style={[latchStyles.receiveFlash, animatedReceiveStyle]} />
           </View>
           
           {/* Edge highlights */}
@@ -181,6 +214,11 @@ const latchStyles = StyleSheet.create({
   glowOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.screenAmber,
+    opacity: 0,
+  },
+  receiveFlash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.ledGreen,
     opacity: 0,
   },
   highlightTop: {
@@ -339,19 +377,28 @@ function ToggleSwitch({ label = 'APPLY', onToggle }: ToggleSwitchProps) {
 // MAIN GAME CONSOLE COMPONENT
 // ============================================
 interface GameConsoleProps {
+  currentTicket?: Ticket | null;
+  selectedTool?: string | null;
   onLeverPull?: () => void;
   onToolSelect?: (tool: string) => void;
   onNavigateToFeatureBoard?: () => void;
   installedModulesCount?: number;
+  ticketsRemaining?: number;
 }
 
 export default function GameConsole({
+  currentTicket,
+  selectedTool: externalSelectedTool,
   onLeverPull,
   onToolSelect,
   onNavigateToFeatureBoard,
   installedModulesCount = 0,
+  ticketsRemaining = 0,
 }: GameConsoleProps) {
-  const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [internalSelectedTool, setInternalSelectedTool] = useState<string | null>(null);
+  
+  // Use external selectedTool if provided, otherwise use internal state
+  const selectedTool = externalSelectedTool !== undefined ? externalSelectedTool : internalSelectedTool;
 
   // Generate texture dots
   const textureDots = Array(30).fill(null).map(() => ({
@@ -365,7 +412,7 @@ export default function GameConsole({
   const scanlines = Array(40).fill(null);
 
   const handleToolPress = (tool: string) => {
-    setSelectedTool(tool);
+    setInternalSelectedTool(tool);
     onToolSelect?.(tool);
   };
 
@@ -582,17 +629,49 @@ export default function GameConsole({
                   
                   {/* Content area - where tickets will display */}
                   <View style={styles.screenContent}>
-                    <Text style={styles.screenPlaceholder}>
-                      {'>'} AWAITING TICKET...
-                    </Text>
-                    {selectedTool && (
-                      <Text style={styles.screenToolSelected}>
-                        TOOL READY: {selectedTool}
-                      </Text>
+                    {currentTicket ? (
+                      <>
+                        {/* Ticket Header */}
+                        <View style={localStyles.ticketHeader}>
+                          <Text style={localStyles.ticketId}>{currentTicket.id}</Text>
+                          <Text style={localStyles.ticketCategory}>{currentTicket.category}</Text>
+                        </View>
+                        
+                        {/* Ticket Description */}
+                        <Text style={styles.screenPlaceholder}>
+                          {'>'} {currentTicket.description}
+                        </Text>
+                        
+                        {/* Ticket Detail */}
+                        {currentTicket.detail && (
+                          <Text style={localStyles.ticketDetail}>
+                            {currentTicket.detail}
+                          </Text>
+                        )}
+                        
+                        {/* Tool Status */}
+                        {selectedTool ? (
+                          <Text style={styles.screenToolSelected}>
+                            TOOL READY: {selectedTool}
+                          </Text>
+                        ) : (
+                          <Text style={styles.screenPlaceholderDim}>
+                            Select a tool to process ticket
+                          </Text>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.screenPlaceholder}>
+                          {'>'} {ticketsRemaining > 0 ? 'LOADING TICKET...' : 'QUEUE EMPTY'}
+                        </Text>
+                        <Text style={styles.screenPlaceholderDim}>
+                          {ticketsRemaining > 0 
+                            ? `${ticketsRemaining} ticket${ticketsRemaining !== 1 ? 's' : ''} remaining`
+                            : 'All tickets processed'}
+                        </Text>
+                      </>
                     )}
-                    <Text style={styles.screenPlaceholderDim}>
-                      Slide panel to access tools
-                    </Text>
                   </View>
                 </View>
               </View>
@@ -962,5 +1041,44 @@ const localStyles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.25)',
     borderBottomLeftRadius: 4,
     borderBottomRightRadius: 4,
+  },
+
+  // Ticket display styles
+  ticketHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.screenAmberDim,
+  },
+  ticketId: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.screenAmberDim,
+    letterSpacing: 1,
+  },
+  ticketCategory: {
+    fontFamily: 'monospace',
+    fontSize: 8,
+    fontWeight: '700',
+    color: colors.screenAmber,
+    letterSpacing: 1,
+    backgroundColor: colors.screenBackground,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.screenAmberDim,
+  },
+  ticketDetail: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    color: colors.screenAmberDim,
+    marginTop: 8,
+    lineHeight: 14,
+    opacity: 0.8,
   },
 });

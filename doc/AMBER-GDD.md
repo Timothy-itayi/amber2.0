@@ -1,20 +1,6 @@
-Nice, this is exactly the right moment to formalize it.
-Below is your **updated GDD**, with the **Feature Board + visual transformation system** integrated cleanly into the existing structure, without bloating scope.
-
-I’ve:
-
-* kept your tone and structure
-* added the new visual/gameplay layer
-* avoided tech or implementation detail
-* preserved MVP focus
-
-You can drop this straight into `doc/AMBER-GDD.md`.
-
----
-
 # AMBER — Game Design Document
 
-**Version:** 0.2
+**Version:** 0.3
 **Last updated:** 2026-01-28
 **Status:** Pre-production / MVP scoping
 
@@ -24,11 +10,11 @@ You can drop this straight into `doc/AMBER-GDD.md`.
 
 ### One-liner
 
-**AMBER** is a fast-paced narrative interface game where you operate a futuristic tech support system that “fixes” broken reality by turning faults into features. You don’t repair; you reinterpret.
+**AMBER** is a fast-paced narrative interface game where you operate a futuristic tech support system that "fixes" broken reality by turning faults into features. You don't repair; you reinterpret.
 
 ### Elevator pitch
 
-You’re an operator on the helpdesk for a clearly broken system. Tickets show up as absurd “bugs in the world”: pigeons delivering invoices, shadows freelancing, lemon shortages only on Tuesdays. Your job is to inspect each ticket, pick a tool, apply a fix—and watch the system reframe whatever happens as a feature.
+You're an operator on the helpdesk for a clearly broken system. Tickets show up as absurd "bugs in the world": pigeons delivering invoices, shadows freelancing, lemon shortages only on Tuesdays. Your job is to inspect each ticket, pick a tool, apply a fix—and watch the system reframe whatever happens as a feature.
 
 Crucially, bugs do not disappear.
 They are **transformed into visible system components**.
@@ -53,7 +39,7 @@ The slogan is the mechanic: **Turning Problems Into Features.**
 
 ### MVP loop (per ticket)
 
-1. **Ticket arrives** — A “reality bug” appears as a card/ticket.
+1. **Ticket arrives** — A "reality bug" appears as a card/ticket.
 2. **Inspect** — Player opens details.
 3. **Apply tool** — Player selects a tool and applies it.
 4. **Transformation** — The ticket visually transforms into a system artifact.
@@ -64,13 +50,13 @@ Progression is shown visually through accumulation of system features.
 
 ---
 
-### “Turning Problems Into Features” as mechanic
+### "Turning Problems Into Features" as mechanic
 
 When the player:
 
 * Ignores a bug
 * Misroutes a ticket
-* Uses the “wrong” fix
+* Uses the "wrong" fix
 
 The system **reframes it as a feature**.
 
@@ -80,10 +66,10 @@ There are no fail states—only new interpretations.
 
 | Apparent bug                  | Reframed feature                |
 | ----------------------------- | ------------------------------- |
-| Printer only prints “HELP”    | Emergency Messaging Device      |
+| Printer only prints "HELP"    | Emergency Messaging Device      |
 | Door opens randomly           | Surprise Entry System           |
 | Pigeons delivering invoices   | Avian Logistics Integration     |
-| Shadow won’t stop freelancing | Autonomous Shadow Labour Module |
+| Shadow won't stop freelancing | Autonomous Shadow Labour Module |
 
 Mechanics, humour, and narrative all stem from this reframe.
 
@@ -97,7 +83,7 @@ Mechanics, humour, and narrative all stem from this reframe.
 
 ### Tools (player actions)
 
-Tools do not “solve” bugs.
+Tools do not "solve" bugs.
 They determine **how the system transforms them**.
 
 Each tool maps to a **type of system artifact**:
@@ -109,7 +95,7 @@ Each tool maps to a **type of system artifact**:
 | DEFER    | Preserve for later  | Archived / Capsule Module   |
 | ESCALATE | Promote to priority | Critical / Alert Module     |
 
-Tools can be reflavoured (e.g. “Reality Calibration,” “Feature Mapper”), but these meanings remain consistent.
+Tools can be reflavoured (e.g. "Reality Calibration," "Feature Mapper"), but these meanings remain consistent.
 
 ---
 
@@ -136,40 +122,59 @@ The player is effectively building a dysfunctional operating system out of mista
 2. **Boot / Logo / Onboarding**
 3. **Ticket Console** — main play screen
 
-### New: Feature Board
+### New: System Map Visualization
 
-A secondary in-world interface panel showing installed “features”.
+When a ticket is "fixed," the player sees a **visual manifestation of the system integrating the new feature** — not just a UI widget appearing.
 
-* Appears as a slide-out panel or brief cutaway.
-* Contains multiple **module slots**.
-* Starts mostly empty.
-* Fills over time with visual modules created from resolved tickets.
+The System Map is:
 
-This board is the main visual representation of:
+* A network diagram showing the AMBER system's current state
+* Nodes represent installed features (color-coded by type)
+* Lines connect features to the system core
+* New features animate into existence with scan sweep + path draw
 
-* progress
-* escalation
-* narrative absurdity
+This visualization serves as:
+
+* **The transformation beat** — the moment between bug and feature
+* **Visual proof** that the system has changed
+* **Accumulating evidence** of the player's impact
+
+Design principle:
+> **Features must be seen operating, not just named.**
+
+Visual references: Hacknet, FTL, Mini Metro, Inscryption Act 3.
+
+---
+
+### Feature Board (Registry View)
+
+A secondary panel for reviewing installed modules.
+
+* Shows module counts by type (Feature, Routed, Archived, Critical)
+* Displays system load and capacity indicators
+* Accessible via the console's FEATURES latch
 
 ---
 
 ### Flow of one ticket
 
 1. Ticket appears
-   “Pigeons delivering invoices again.”
+   "Pigeons delivering invoices again."
 
 2. Player chooses tool (e.g. FIX)
 
-3. Ticket animates
-
-4. Feature Board appears:
-
-   * A new module installs into a slot
-   * Label appears:
+3. **System Map Visualization plays:**
+   * Screen transitions to dark network view
+   * Scan sweep passes across the display
+   * Connection line draws from system core to new node position
+   * Node pulses into existence with glow
+   * Label fades in:
 
      > AVIAN LOGISTICS INTEGRATION — ACTIVE
 
-5. Return to Ticket Console
+4. Return to Ticket Console
+
+The player *sees* the feature being integrated, not just a button appearing.
 
 ---
 
@@ -180,7 +185,7 @@ This board is the main visual representation of:
 The player is **Operator OP-7734**, provisional clearance, on the Reality Support desk for AMBER Industries. Tickets are genuine in-world complaints; fixes are whatever the AMBER system does and then labels as a feature.
 
 AMBER never doubts itself.
-Every outcome is “by design”.
+Every outcome is "by design".
 
 ### Voice
 
@@ -194,18 +199,22 @@ Every outcome is “by design”.
 
 * **Existing:** 90s terminal aesthetic (amber/green phosphor, scanlines), device-frame UI, pixel dissolve, boot/CRT feel.
 * **Ticket cards:** Clear hierarchy; optional glitch for escalation.
+* **System Map Visualization:**
+
+  * Dark background with subtle grid
+  * Amber/colored glowing nodes and connection lines
+  * Scan sweep animation for "classification" feel
+  * Node types distinguished by color:
+    * Feature (green)
+    * Routed (blue)
+    * Archived (purple)
+    * Critical (red)
+
 * **Feature Board:**
 
-  * Mechanical, sci-fi control panel
+  * Mechanical, sci-fi control panel aesthetic
   * CRTs, dials, toggles, LEDs
-  * Module slots that fill with:
-
-    * Feature modules
-    * Routed packets
-    * Archived capsules
-    * Critical alerts
-
-Modules are symbolic UI objects, not literal world representations.
+  * Module counts and system status displays
 
 ### Audio
 
@@ -224,7 +233,8 @@ Modules are symbolic UI objects, not literal world representations.
 ### In scope for MVP
 
 * Ticket Console
-* Feature Board
+* System Map Visualization (transformation animation)
+* Feature Board (registry view)
 * 4 module templates:
 
   * Feature
@@ -252,7 +262,8 @@ Modules are symbolic UI objects, not literal world representations.
 AMBER rebrands it.
 The interface mutates.**
 
+**Features must be seen operating, not just named.**
+
 ---
 
 *Document lives in `doc/AMBER-GDD.md`. Update this file as mechanics, scope, or brand details change.*
-
