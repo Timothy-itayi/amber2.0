@@ -1,18 +1,20 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withSequence,
   withTiming,
-  withDelay,
   interpolate,
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { featureBoardStyles as styles, featureBoardColors } from '../../styles/feature-board.styles';
 import { colors } from '../../styles/game-console.styles';
+import SystemMap from './SystemMap';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ============================================
 // TYPES
@@ -30,7 +32,6 @@ export interface InstalledModule {
 export interface FeatureBoardProps {
   modules: InstalledModule[];
   onBack: () => void;
-  systemLoad?: number; // 0-100
   ticketsProcessed?: number;
 }
 
@@ -210,32 +211,80 @@ function CategoryButton({ label, count, active, onPress }: CategoryButtonProps) 
 }
 
 // ============================================
-// MAIN FEATURE BOARD COMPONENT
+// MODULE DETAIL PANEL COMPONENT
+// ============================================
+interface ModuleDetailPanelProps {
+  module: InstalledModule | undefined;
+}
+
+function ModuleDetailPanel({ module }: ModuleDetailPanelProps) {
+  if (!module) {
+    return (
+      <View style={hybridStyles.detailPanel}>
+        <Text style={hybridStyles.detailPanelEmpty}>SELECT A NODE</Text>
+        <Text style={hybridStyles.detailPanelHint}>Tap any node on the map to view module details</Text>
+      </View>
+    );
+  }
+
+  const getTypeColor = () => {
+    switch (module.type) {
+      case 'feature': return '#4ade80';
+      case 'routed': return '#60a5fa';
+      case 'archived': return '#a78bfa';
+      case 'critical': return '#f87171';
+    }
+  };
+
+  return (
+    <View style={hybridStyles.detailPanel}>
+      <View style={hybridStyles.detailHeader}>
+        <View style={[hybridStyles.detailTypeBadge, { backgroundColor: getTypeColor() }]}>
+          <Text style={hybridStyles.detailTypeBadgeText}>{module.type.toUpperCase()}</Text>
+        </View>
+        <Text style={hybridStyles.detailTicketId}>{module.ticketId}</Text>
+      </View>
+      <Text style={hybridStyles.detailModuleName}>{module.name}</Text>
+      <View style={hybridStyles.detailStatusRow}>
+        <View style={[hybridStyles.detailStatusDot, { backgroundColor: getTypeColor() }]} />
+        <Text style={hybridStyles.detailStatusText}>{module.status}</Text>
+      </View>
+    </View>
+  );
+}
+
+// ============================================
+// LEGEND COMPONENT
+// ============================================
+function MapLegend() {
+  const legendItems = [
+    { color: '#4ade80', label: 'FIX' },
+    { color: '#60a5fa', label: 'ROUTE' },
+    { color: '#a78bfa', label: 'DEFER' },
+    { color: '#f87171', label: 'ESCL' },
+  ];
+
+  return (
+    <View style={hybridStyles.legend}>
+      {legendItems.map((item) => (
+        <View key={item.label} style={hybridStyles.legendItem}>
+          <View style={[hybridStyles.legendDot, { backgroundColor: item.color }]} />
+          <Text style={hybridStyles.legendLabel}>{item.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ============================================
+// MAIN FEATURE BOARD COMPONENT (HYBRID LAYOUT)
 // ============================================
 export default function FeatureBoard({
   modules,
   onBack,
-  systemLoad = 42,
   ticketsProcessed = 0,
 }: FeatureBoardProps) {
-  const scanlineAnim = useSharedValue(0);
-
-  // CRT flicker effect
-  useEffect(() => {
-    scanlineAnim.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 100 }),
-        withTiming(0.95, { duration: 50 }),
-        withTiming(1, { duration: 100 })
-      ),
-      -1,
-      false
-    );
-  }, []);
-
-  const animatedCrtStyle = useAnimatedStyle(() => ({
-    opacity: scanlineAnim.value,
-  }));
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
 
   // Count modules by type
   const moduleCounts = {
@@ -245,12 +294,14 @@ export default function FeatureBoard({
     critical: modules.filter(m => m.type === 'critical').length,
   };
 
-  // Generate scanlines
-  const scanlines = Array(30).fill(null);
+  // Calculate map dimensions (responsive to screen)
+  const mapWidth = SCREEN_WIDTH - 40; // 20px padding on each side
 
-  // Generate module slots (8 slots max for MVP)
-  const MAX_SLOTS = 8;
-  const slots = Array(MAX_SLOTS).fill(null).map((_, i) => modules[i] || null);
+  const handleNodePress = (module: InstalledModule) => {
+    setSelectedModuleId(prev => prev === module.id ? null : module.id);
+  };
+
+  const selectedModule = modules.find(m => m.id === selectedModuleId);
 
   return (
     <View style={styles.container}>
@@ -273,8 +324,8 @@ export default function FeatureBoard({
         {/* ============================================ */}
         <View style={styles.headerBar}>
           <View>
-            <Text style={styles.headerTitle}>FEATURE REGISTRY</Text>
-            <Text style={styles.headerSubtitle}>INSTALLED MODULES</Text>
+            <Text style={styles.headerTitle}>SYSTEM MAP</Text>
+            <Text style={styles.headerSubtitle}>FEATURE TOPOLOGY</Text>
           </View>
           <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.7}>
             <Text style={styles.backButtonText}>◀ CONSOLE</Text>
@@ -282,112 +333,62 @@ export default function FeatureBoard({
         </View>
 
         {/* ============================================ */}
-        {/* MAIN LAYOUT */}
+        {/* SYSTEM MAP (CENTER) - Expanded to fill space */}
         {/* ============================================ */}
-        <View style={styles.mainLayout}>
-          {/* ============================================ */}
-          {/* LEFT PANEL - Category Buttons */}
-          {/* ============================================ */}
-          <View style={styles.leftPanel}>
-            <View style={styles.categoryButtonsContainer}>
-              <CategoryButton
-                label="FEATURE"
-                count={moduleCounts.feature}
-                active={moduleCounts.feature > 0}
-              />
-              <CategoryButton
-                label="ROUTED"
-                count={moduleCounts.routed}
-                active={moduleCounts.routed > 0}
-              />
-              <CategoryButton
-                label="ARCHIVE"
-                count={moduleCounts.archived}
-                active={moduleCounts.archived > 0}
-              />
-              <CategoryButton
-                label="CRITICAL"
-                count={moduleCounts.critical}
-                active={moduleCounts.critical > 0}
-              />
+        <View style={hybridStyles.mapContainer}>
+          <View style={hybridStyles.mapBezel}>
+            {/* Map Legend overlay */}
+            <View style={hybridStyles.mapOverlayTop}>
+              <MapLegend />
             </View>
+            
+            <SystemMap
+              modules={modules}
+              width={mapWidth}
+              height={undefined} // Let it fill the container
+              showGrid={true}
+              showLabels={true}
+              onNodePress={handleNodePress}
+              selectedModuleId={selectedModuleId}
+            />
+          </View>
+          
+          {/* Module Detail Panel - replaces the empty gap */}
+          <ModuleDetailPanel module={selectedModule} />
+        </View>
 
-            {/* Dial at bottom */}
-            <Dial value={systemLoad} label="LOAD" />
+        {/* ============================================ */}
+        {/* STATS BAR */}
+        {/* ============================================ */}
+        <View style={hybridStyles.statsBar}>
+          {/* Category counts */}
+          <View style={hybridStyles.categoryRow}>
+            <CategoryButton
+              label="FIX"
+              count={moduleCounts.feature}
+              active={moduleCounts.feature > 0}
+            />
+            <CategoryButton
+              label="ROUTE"
+              count={moduleCounts.routed}
+              active={moduleCounts.routed > 0}
+            />
+            <CategoryButton
+              label="DEFER"
+              count={moduleCounts.archived}
+              active={moduleCounts.archived > 0}
+            />
+            <CategoryButton
+              label="ESCL"
+              count={moduleCounts.critical}
+              active={moduleCounts.critical > 0}
+            />
           </View>
 
-          {/* ============================================ */}
-          {/* CENTER PANEL - CRT & Modules */}
-          {/* ============================================ */}
-          <View style={styles.centerPanel}>
-            {/* CRT Status Display */}
-            <View style={styles.crtContainer}>
-              <View style={styles.crtBezel}>
-                <Animated.View style={[styles.crtScreen, animatedCrtStyle]}>
-                  {/* Glow */}
-                  <View style={styles.crtGlow} />
-                  
-                  {/* Scanlines */}
-                  <View style={styles.crtScanlines}>
-                    {scanlines.map((_, i) => (
-                      <View key={i} style={styles.crtScanline} />
-                    ))}
-                  </View>
-                  
-                  {/* Reflection */}
-                  <View style={styles.crtReflection} />
-                  
-                  {/* Content */}
-                  <View style={styles.crtContent}>
-                    <Text style={styles.crtStatusText}>
-                      {modules.length === 0
-                        ? '> AWAITING FEATURES...'
-                        : `> ${modules.length} MODULE${modules.length !== 1 ? 'S' : ''} INSTALLED`}
-                    </Text>
-                    <Text style={styles.crtStatusLabel}>
-                      {modules.length === 0
-                        ? 'PROCESS TICKETS TO INSTALL'
-                        : 'SYSTEM ENHANCED'}
-                    </Text>
-                  </View>
-                </Animated.View>
-              </View>
-              <Text style={styles.crtLabel}>STATUS MONITOR</Text>
-            </View>
-
-            {/* Module Slots Grid */}
-            <View style={styles.moduleSlotsContainer}>
-              <Text style={styles.moduleSlotsHeader}>INSTALLED MODULES</Text>
-              <View style={styles.moduleSlotsGrid}>
-                {slots.map((module, index) =>
-                  module ? (
-                    <Module key={module.id} module={module} />
-                  ) : (
-                    <EmptySlot key={`empty-${index}`} index={index} />
-                  )
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* ============================================ */}
-          {/* RIGHT PANEL - Status Dials */}
-          {/* ============================================ */}
-          <View style={styles.rightPanel}>
-            <View style={styles.statusDialsContainer}>
-              <StatusDial value={ticketsProcessed} label="PROCESSED" />
-              <StatusDial value={modules.length} label="MODULES" />
-              <StatusDial value={`${systemLoad}%`} label="CAPACITY" />
-            </View>
-
-            {/* LED Indicator */}
-            <View style={styles.ledIndicatorContainer}>
-              <View style={[
-                styles.ledIndicator,
-                modules.length === 0 && styles.ledIndicatorOff
-              ]} />
-              <Text style={styles.ledIndicatorLabel}>ACTIVE</Text>
-            </View>
+          {/* Status indicators - removed LOAD dial */}
+          <View style={hybridStyles.statusRow}>
+            <StatusDial value={ticketsProcessed} label="PROCESSED" />
+            <StatusDial value={modules.length} label="MODULES" />
           </View>
         </View>
 
@@ -395,13 +396,162 @@ export default function FeatureBoard({
         {/* BOTTOM BAR */}
         {/* ============================================ */}
         <View style={styles.bottomBar}>
-          <Text style={styles.bottomLabel}>AMBER FEATURE REGISTRY v1.0</Text>
+          <Text style={styles.bottomLabel}>AMBER SYSTEM TOPOLOGY v2.0</Text>
           <Text style={styles.bottomValue}>OP-7734</Text>
         </View>
       </View>
     </View>
   );
 }
+
+// ============================================
+// HYBRID LAYOUT STYLES
+// ============================================
+const hybridStyles = StyleSheet.create({
+  mapContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  mapBezel: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: colors.bodyDarker,
+    borderRadius: 6,
+    overflow: 'hidden',
+    position: 'relative',
+    // Inner shadow effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+  },
+  mapOverlayTop: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    right: 8,
+    zIndex: 10,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  // Legend styles
+  legend: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(10, 12, 8, 0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 168, 75, 0.2)',
+    gap: 12,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  legendDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  legendLabel: {
+    fontFamily: 'monospace',
+    fontSize: 7,
+    color: 'rgba(212, 168, 75, 0.7)',
+    letterSpacing: 1,
+  },
+  // Detail panel styles
+  detailPanel: {
+    marginTop: 8,
+    backgroundColor: colors.bodyDarker,
+    borderRadius: 4,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.bodyDarkest,
+    minHeight: 70,
+  },
+  detailPanelEmpty: {
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMid,
+    textAlign: 'center',
+    letterSpacing: 2,
+  },
+  detailPanelHint: {
+    fontFamily: 'monospace',
+    fontSize: 8,
+    color: colors.textDark,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  detailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  detailTypeBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 2,
+  },
+  detailTypeBadgeText: {
+    fontFamily: 'monospace',
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: 1,
+  },
+  detailTicketId: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    color: colors.textDark,
+    letterSpacing: 1,
+  },
+  detailModuleName: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.screenAmber,
+    marginBottom: 4,
+  },
+  detailStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  detailStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  detailStatusText: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    color: colors.textLight,
+  },
+  statsBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.bodyDarker,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 40,
+  },
+});
 
 // ============================================
 // LOCAL STYLES
