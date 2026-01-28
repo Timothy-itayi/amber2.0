@@ -759,6 +759,43 @@ export const deviceStyles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+
+  // AMBER acronym block - fits "Always Much Better Easy Results"
+  acronymBlock: {
+    position: 'absolute',
+    top: 12,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  acronymTitle: {
+    fontFamily: 'monospace',
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textBrand,
+    letterSpacing: 3,
+    marginBottom: 4,
+  },
+  acronymPhrase: {
+    fontFamily: 'monospace',
+    fontSize: 9,
+    fontWeight: '600',
+    color: colors.textMid,
+    letterSpacing: 1,
+    textAlign: 'center',
+    lineHeight: 13,
+    maxWidth: '100%',
+  },
+  terminalTextWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: 52,
+    justifyContent: 'flex-start',
+  },
   
   // Screen labels below
   screenLabelRow: {

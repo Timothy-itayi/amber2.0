@@ -332,14 +332,22 @@ export default function DeviceMainMenu({
                     {/* Screen reflection glare */}
                     <View style={styles.screenReflection} />
                     
-                    {/* TERMINAL TEXT - Typewriter animation */}
+                    {/* AMBER acronym + terminal */}
                     <View style={styles.terminalContainer}>
-                      <TerminalText 
-                        text={terminalText}
-                        typingSpeed={80}
-                        onComplete={handleTypingComplete}
-                        showSystemReady={showSystemReady}
-                      />
+                      <View style={styles.acronymBlock}>
+                        <Text style={styles.acronymTitle}>AMBER</Text>
+                        <Text style={styles.acronymPhrase} numberOfLines={2}>
+                          Always Much Better{'\n'}Easy Results
+                        </Text>
+                      </View>
+                      <View style={styles.terminalTextWrapper}>
+                        <TerminalText 
+                          text={terminalText}
+                          typingSpeed={80}
+                          onComplete={handleTypingComplete}
+                          showSystemReady={showSystemReady}
+                        />
+                      </View>
                     </View>
                   </View>
                 </View>
